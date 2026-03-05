@@ -18,7 +18,6 @@ export interface ChartProps extends BoxProps {
   updateMode?: UpdateMode;
   animationDuration?: number;
   onTooltip?: (model: any) => void;
-  showLegend?: boolean;
 }
 
 export function Chart({
@@ -28,7 +27,6 @@ export function Chart({
   updateMode,
   onTooltip,
   chartOptions,
-  showLegend = true,
   ...props
 }: ChartProps) {
   const canvas = useRef(null);
@@ -126,7 +124,7 @@ export function Chart({
       <Box {...props}>
         <canvas ref={canvas} />
       </Box>
-      {showLegend && <Legend items={legendItems} onClick={handleLegendClick} />}
+      <Legend items={legendItems} onClick={handleLegendClick} />
     </Column>
   );
 }
