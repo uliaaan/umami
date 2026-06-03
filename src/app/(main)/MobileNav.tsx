@@ -1,8 +1,8 @@
 import { Grid, IconLabel, NavMenu, NavMenuItem, Row, Text } from '@umami/react-zen';
 import Link from 'next/link';
 import { WebsiteNav } from '@/app/(main)/websites/[websiteId]/WebsiteNav';
-import { useMessages, useNavigation } from '@/components/hooks';
-import { Globe, Grid2x2, LinkIcon } from '@/components/icons';
+import { useLoginQuery, useMessages, useNavigation } from '@/components/hooks';
+import { Globe, Grid2x2, LayoutDashboard, LinkIcon, User } from '@/components/icons';
 import { MobileMenuButton } from '@/components/input/MobileMenuButton';
 import { NavButton } from '@/components/input/NavButton';
 import { Logo } from '@/components/svg';
@@ -12,10 +12,17 @@ import { SettingsNav } from './settings/SettingsNav';
 export function MobileNav() {
   const { formatMessage, labels } = useMessages();
   const { pathname, websiteId, renderUrl } = useNavigation();
+  const { user } = useLoginQuery();
   const isAdmin = pathname.includes('/admin');
   const isSettings = pathname.includes('/settings');
 
   const links = [
+    {
+      id: 'dashboard',
+      label: formatMessage(labels.dashboard),
+      path: '/dashboard',
+      icon: <LayoutDashboard />,
+    },
     {
       id: 'websites',
       label: formatMessage(labels.websites),
@@ -34,7 +41,13 @@ export function MobileNav() {
       path: '/pixels',
       icon: <Grid2x2 />,
     },
-  ];
+    user?.isAdmin && {
+      id: 'users',
+      label: formatMessage(labels.users),
+      path: '/admin/users',
+      icon: <User />,
+    },
+  ].filter(Boolean);
 
   return (
     <Grid columns="auto 1fr" flexGrow={1} backgroundColor="3" borderRadius>
