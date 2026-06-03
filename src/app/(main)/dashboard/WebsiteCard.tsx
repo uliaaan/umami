@@ -22,7 +22,7 @@ function WebsiteCardChart({ websiteId }: { websiteId: string }) {
   const { locale, dateLocale } = useLocale();
   const { formatMessage, labels } = useMessages();
   const { colors } = getThemeColors(theme);
-  const { data, isLoading, isFetching, error } = useWebsitePageviewsQuery({
+  const { data, isLoading, isFetching } = useWebsitePageviewsQuery({
     websiteId,
   });
 
@@ -62,6 +62,7 @@ function WebsiteCardChart({ websiteId }: { websiteId: string }) {
     <LoadingPanel data={data} isFetching={isFetching} isLoading={isLoading} minHeight="80px">
       {chartData && (
         <BarChart
+          key={value}
           chartData={chartData}
           unit={unit}
           minDate={startDate}
@@ -79,13 +80,18 @@ function WebsiteCardMetrics({ websiteId }: { websiteId: string }) {
   const { formatMessage, labels, getErrorMessage } = useMessages();
   const { data, isLoading, isFetching, error } = useWebsiteStatsQuery(websiteId);
 
-  const { pageviews, visitors } = data || {};
+  const { pageviews, visitors, visits } = data || {};
 
   const metrics = data
     ? [
         {
           value: visitors,
           label: formatMessage(labels.visitors),
+          formatValue: formatLongNumber,
+        },
+        {
+          value: visits,
+          label: formatMessage(labels.visits),
           formatValue: formatLongNumber,
         },
         {
@@ -102,26 +108,20 @@ function WebsiteCardMetrics({ websiteId }: { websiteId: string }) {
       isLoading={isLoading}
       isFetching={isFetching}
       error={getErrorMessage(error)}
-      minHeight="80px"
+      minHeight="40px"
     >
-      <Row gap="2" alignItems="center">
-        {metrics?.[0] && (
-          <MetricCard
-            value={metrics[0].value}
-            label={metrics[0].label}
-            formatValue={metrics[0].formatValue}
-            showLabel={true}
-          />
-        )}
-        <Text size="4">·</Text>
-        {metrics?.[1] && (
-          <MetricCard
-            value={metrics[1].value}
-            label={metrics[1].label}
-            formatValue={metrics[1].formatValue}
-            showLabel={true}
-          />
-        )}
+      <Row gap="2" alignItems="center" wrap="wrap">
+        {metrics?.map((metric, index) => (
+          <Row key={metric.label} alignItems="center" gap="2">
+            {index > 0 && <Text size="4">·</Text>}
+            <MetricCard
+              value={metric.value}
+              label={metric.label}
+              formatValue={metric.formatValue}
+              showLabel={true}
+            />
+          </Row>
+        ))}
       </Row>
     </LoadingPanel>
   );
@@ -137,12 +137,14 @@ export function WebsiteCard({
   return (
     <Column gap="3" padding="4" borderRadius="3" border backgroundColor height="100%">
       <Row justifyContent="space-between" alignItems="center">
-        <Row gap="2" alignItems="center">
+        <Row gap="2" alignItems="center" minWidth="0">
           <Icon size="md" color="muted">
             <Favicon domain={website.domain} />
           </Icon>
-          <Text size="lg" weight="bold" wrap="nowrap">
-            <Link href={renderUrl(`/websites/${website.id}`)}>{website.domain}</Link>
+          <Text size="lg" weight="bold" truncate>
+            <Link href={renderUrl(`/websites/${website.id}`, false)}>
+              {website.domain || website.name}
+            </Link>
           </Text>
         </Row>
         <Column alignItems="flex-end" gap="1">

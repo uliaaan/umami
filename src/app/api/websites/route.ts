@@ -4,7 +4,7 @@ import redis from '@/lib/redis';
 import { getQueryFilters, parseRequest } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
 import { pagingParams, searchParams } from '@/lib/schema';
-import { canCreateTeamWebsite, canCreateWebsite } from '@/permissions';
+import { canCreateWebsite } from '@/permissions';
 import { createWebsite, getWebsiteCount } from '@/queries/prisma';
 import { getAllUserWebsitesIncludingTeamOwner, getUserWebsites } from '@/queries/prisma/website';
 
@@ -51,7 +51,11 @@ export async function POST(request: Request) {
 
   const { id, name, domain, shareId, teamId } = body;
 
-  if (process.env.CLOUD_MODE && !teamId) {
+  if (teamId || !(await canCreateWebsite(auth))) {
+    return unauthorized();
+  }
+
+  if (process.env.CLOUD_MODE) {
     const account = await redis.client.get(`account:${auth.user.id}`);
 
     if (!account?.hasSubscription) {
@@ -63,22 +67,14 @@ export async function POST(request: Request) {
     }
   }
 
-  if ((teamId && !(await canCreateTeamWebsite(auth, teamId))) || !(await canCreateWebsite(auth))) {
-    return unauthorized();
-  }
-
   const data: any = {
     id: id ?? uuid(),
     createdBy: auth.user.id,
     name,
     domain,
     shareId,
-    teamId,
+    userId: auth.user.id,
   };
-
-  if (!teamId) {
-    data.userId = auth.user.id;
-  }
 
   const website = await createWebsite(data);
 

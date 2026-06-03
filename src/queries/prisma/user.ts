@@ -128,6 +128,11 @@ export async function deleteUser(userId: string) {
 
   if (cloudMode) {
     return transaction([
+      client.websiteUser.deleteMany({
+        where: {
+          OR: [{ userId }, { websiteId: { in: websiteIds } }],
+        },
+      }),
       client.website.updateMany({
         data: {
           deletedAt: new Date(),
@@ -171,6 +176,11 @@ export async function deleteUser(userId: string) {
             userId,
           },
         ],
+      },
+    }),
+    client.websiteUser.deleteMany({
+      where: {
+        OR: [{ userId }, { websiteId: { in: websiteIds } }],
       },
     }),
     client.team.deleteMany({

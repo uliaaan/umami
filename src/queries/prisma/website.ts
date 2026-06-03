@@ -1,5 +1,4 @@
 import type { Prisma } from '@/generated/prisma/client';
-import { ROLES } from '@/lib/constants';
 import prisma from '@/lib/prisma';
 import redis from '@/lib/redis';
 import type { QueryFilters } from '@/lib/types';
@@ -44,37 +43,23 @@ export async function getWebsites(criteria: Prisma.WebsiteFindManyArgs, filters:
 }
 
 export async function getAllUserWebsitesIncludingTeamOwner(userId: string, filters?: QueryFilters) {
-  return getWebsites(
-    {
-      where: {
-        OR: [
-          { userId },
-          {
-            team: {
-              deletedAt: null,
-              members: {
-                some: {
-                  role: ROLES.teamOwner,
-                  userId,
-                },
-              },
-            },
-          },
-        ],
-      },
-    },
-    {
-      orderBy: 'name',
-      ...filters,
-    },
-  );
+  return getUserWebsites(userId, filters);
 }
 
 export async function getUserWebsites(userId: string, filters?: QueryFilters) {
   return getWebsites(
     {
       where: {
-        userId,
+        OR: [
+          { userId },
+          {
+            sharedUsers: {
+              some: {
+                userId,
+              },
+            },
+          },
+        ],
       },
       include: {
         user: {
@@ -116,6 +101,66 @@ export async function createWebsite(
 ) {
   return prisma.client.website.create({
     data,
+  });
+}
+
+export async function getWebsiteUsers(websiteId: string, filters?: QueryFilters) {
+  const { search } = filters || {};
+  const where: Prisma.WebsiteUserWhereInput = {
+    websiteId,
+    user: {
+      deletedAt: null,
+      ...prisma.getSearchParameters(search, [{ username: 'contains' }]),
+    },
+  };
+
+  return prisma.pagedQuery(
+    'websiteUser',
+    {
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            role: true,
+          },
+        },
+      },
+    },
+    {
+      orderBy: 'createdAt',
+      sortDescending: true,
+      ...filters,
+    },
+  );
+}
+
+export async function getWebsiteUser(websiteId: string, userId: string) {
+  return prisma.client.websiteUser.findUnique({
+    where: {
+      websiteId_userId: {
+        websiteId,
+        userId,
+      },
+    },
+  });
+}
+
+export async function createWebsiteUser(data: Prisma.WebsiteUserUncheckedCreateInput) {
+  return prisma.client.websiteUser.create({
+    data,
+  });
+}
+
+export async function deleteWebsiteUser(websiteId: string, userId: string) {
+  return prisma.client.websiteUser.delete({
+    where: {
+      websiteId_userId: {
+        websiteId,
+        userId,
+      },
+    },
   });
 }
 
@@ -199,6 +244,9 @@ export async function deleteWebsite(websiteId: string) {
         where: { websiteId },
       }),
       client.segment.deleteMany({
+        where: { websiteId },
+      }),
+      client.websiteUser.deleteMany({
         where: { websiteId },
       }),
       cloudMode

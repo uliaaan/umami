@@ -9,8 +9,8 @@ import {
 } from '@umami/react-zen';
 import Link from 'next/link';
 import type { Key } from 'react';
-import { useGlobalState, useMessages, useNavigation } from '@/components/hooks';
-import { Globe, Grid2x2, LinkIcon, PanelLeft } from '@/components/icons';
+import { useGlobalState, useLoginQuery, useMessages, useNavigation } from '@/components/hooks';
+import { Globe, Grid2x2, LayoutDashboard, LinkIcon, PanelLeft, User } from '@/components/icons';
 import { LanguageButton } from '@/components/input/LanguageButton';
 import { NavButton } from '@/components/input/NavButton';
 import { PanelButton } from '@/components/input/PanelButton';
@@ -19,11 +19,18 @@ import { Logo } from '@/components/svg';
 export function SideNav(props: SidebarProps) {
   const { formatMessage, labels } = useMessages();
   const { pathname, renderUrl, websiteId, router } = useNavigation();
+  const { user } = useLoginQuery();
   const [isCollapsed, setIsCollapsed] = useGlobalState('sidenav-collapsed');
 
   const hasNav = !!(websiteId || pathname.startsWith('/admin') || pathname.includes('/settings'));
 
   const links = [
+    {
+      id: 'dashboard',
+      label: formatMessage(labels.dashboard),
+      path: '/dashboard',
+      icon: <LayoutDashboard />,
+    },
     {
       id: 'websites',
       label: formatMessage(labels.websites),
@@ -42,7 +49,13 @@ export function SideNav(props: SidebarProps) {
       path: '/pixels',
       icon: <Grid2x2 />,
     },
-  ];
+    user?.isAdmin && {
+      id: 'users',
+      label: formatMessage(labels.users),
+      path: '/admin/users',
+      icon: <User />,
+    },
+  ].filter(Boolean);
 
   const handleSelect = (id: Key) => {
     router.push(id === 'user' ? '/websites' : `/teams/${id}/websites`);

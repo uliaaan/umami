@@ -53,6 +53,7 @@ export * from './queries/useWebsiteSessionStatsQuery';
 export * from './queries/useWebsiteSessionsQuery';
 export * from './queries/useWebsiteStatsQuery';
 export * from './queries/useWebsitesQuery';
+export * from './queries/useWebsiteUsersQuery';
 export * from './queries/useWebsiteValuesQuery';
 export * from './queries/useWeeklyTrafficQuery';
 

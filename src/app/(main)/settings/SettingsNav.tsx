@@ -1,6 +1,6 @@
 import { SideMenu } from '@/components/common/SideMenu';
 import { useMessages, useNavigation } from '@/components/hooks';
-import { Settings2, UserCircle, Users } from '@/components/icons';
+import { Settings2, UserCircle } from '@/components/icons';
 
 export function SettingsNav({ onItemClick }: { onItemClick?: () => void }) {
   const { formatMessage, labels } = useMessages();
@@ -26,12 +26,6 @@ export function SettingsNav({ onItemClick }: { onItemClick?: () => void }) {
           label: formatMessage(labels.profile),
           path: renderUrl('/settings/profile'),
           icon: <UserCircle />,
-        },
-        {
-          id: 'teams',
-          label: formatMessage(labels.teams),
-          path: renderUrl('/settings/teams'),
-          icon: <Users />,
         },
       ],
     },

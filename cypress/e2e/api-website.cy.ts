@@ -4,25 +4,39 @@ describe('Website API tests', () => {
   Cypress.session.clearAllSavedSessions();
 
   let websiteId;
-  let teamId;
+  let sharedUserId;
+  let sharedAuthorization;
+  const sharedUsername = `cypress-share-${uuid()}`;
 
   before(() => {
     cy.login(Cypress.env('umami_user'), Cypress.env('umami_password'));
-    cy.fixture('teams').then(data => {
-      const teamCreate = data.teamCreate;
+
+    cy.request({
+      method: 'POST',
+      url: '/api/users',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: Cypress.env('authorization'),
+      },
+      body: {
+        username: sharedUsername,
+        password: 'password',
+        role: 'user',
+      },
+    }).then(response => {
+      sharedUserId = response.body.id;
+      expect(response.status).to.eq(200);
+
       cy.request({
         method: 'POST',
-        url: '/api/teams',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: Cypress.env('authorization'),
+        url: '/api/auth/login',
+        body: {
+          username: sharedUsername,
+          password: 'password',
         },
-        body: teamCreate,
-      }).then(response => {
-        teamId = response.body[0].id;
-        expect(response.status).to.eq(200);
-        expect(response.body[0]).to.have.property('name', 'cypress');
-        expect(response.body[1]).to.have.property('role', 'team-owner');
+      }).then(loginResponse => {
+        sharedAuthorization = `bearer ${loginResponse.body.token}`;
+        expect(loginResponse.status).to.eq(200);
       });
     });
   });
@@ -47,7 +61,7 @@ describe('Website API tests', () => {
     });
   });
 
-  it('Creates a website for team.', () => {
+  it('Rejects team website creation.', () => {
     cy.request({
       method: 'POST',
       url: '/api/websites',
@@ -58,12 +72,11 @@ describe('Website API tests', () => {
       body: {
         name: 'Team Website',
         domain: 'teamwebsite.com',
-        teamId: teamId,
+        teamId: uuid(),
       },
+      failOnStatusCode: false,
     }).then(response => {
-      expect(response.status).to.eq(200);
-      expect(response.body).to.have.property('name', 'Team Website');
-      expect(response.body).to.have.property('domain', 'teamwebsite.com');
+      expect(response.status).to.eq(401);
     });
   });
 
@@ -126,6 +139,55 @@ describe('Website API tests', () => {
       expect(response.status).to.eq(200);
       expect(response.body).to.have.property('name', 'Cypress Website');
       expect(response.body).to.have.property('domain', 'cypress.com');
+    });
+  });
+
+  it('Shares a website with a user.', () => {
+    cy.request({
+      method: 'POST',
+      url: `/api/websites/${websiteId}/users`,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: Cypress.env('authorization'),
+      },
+      body: {
+        userId: sharedUserId,
+      },
+    }).then(response => {
+      expect(response.status).to.eq(200);
+      expect(response.body).to.have.property('websiteId', websiteId);
+      expect(response.body).to.have.property('userId', sharedUserId);
+    });
+  });
+
+  it('Allows a shared user to view a website.', () => {
+    cy.request({
+      method: 'GET',
+      url: `/api/websites/${websiteId}`,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: sharedAuthorization,
+      },
+    }).then(response => {
+      expect(response.status).to.eq(200);
+      expect(response.body).to.have.property('id', websiteId);
+    });
+  });
+
+  it('Prevents a shared user from updating a website.', () => {
+    cy.request({
+      method: 'POST',
+      url: `/api/websites/${websiteId}`,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: sharedAuthorization,
+      },
+      body: {
+        name: 'Unauthorized Update',
+      },
+      failOnStatusCode: false,
+    }).then(response => {
+      expect(response.status).to.eq(401);
     });
   });
 
@@ -193,6 +255,6 @@ describe('Website API tests', () => {
   });
 
   after(() => {
-    cy.deleteTeam(teamId);
+    cy.deleteUser(sharedUserId);
   });
 });
